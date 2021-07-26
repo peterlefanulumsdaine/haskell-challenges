@@ -23,42 +23,37 @@ instance Iterable Integer where
 largestPowersInt :: Int -> [Int]
 largestPowersInt = largestPowers
 
-largestPowers0 :: Iterable a => Int -> [a]
-largestPowers0 n = map inc lpn
-  where
-    lpn = replicate (n-1) zer ++ ntersperse (map inc lpn)
-    ntersperse (a:as) = (a : replicate (n-1) zer) ++ (ntersperse as)
+-- We give two approaches:
+-- one “list-based”, using the self-similarity of the sequence, very elegant and Haskelly, but a bit complicated to analyse/optimise for performance;
+-- the other “counting-based”, simply counting up in base n and then counting the trailing zeros of each number; more naïve, and slower (at least at first), but with more clearly scalable performance (should be log-linear-time, constant/log space?)
 
-largestPowers1 :: Iterable a => Int -> [a]
-largestPowers1 n = map inc lpn
-  where
-    lpn = replicate (n-1) zer ++ foldr (\a l -> a : replicate (n-1) zer ++ l) [] (map inc lpn)
+-- Comparison in practice is interesting: In `ghci`, the list-based version is significantly quicker and (?)lower-memory than `largestPowers4`.  But under optimised compilation, running the test suite, the counting version fits into the restricted heap and passes the efficiency test better.
 
-largestPowers2 :: Iterable a => Int -> [a]
-largestPowers2 n = lpn
-  where
-    lpn = replicate (n-1) (inc zer) ++ foldr (\a l -> a : replicate (n-1) (inc zer) ++ l) [] (map inc lpn)
 
-largestPowers3 :: Iterable a => Int -> [a]
-largestPowers3 n = lpn
+-- naïvely-written version of the fully list-based approach
+largestPowers_list_0 :: Iterable a => Int -> [a]
+largestPowers_list_0 n = map inc $ replicate (n-1) zer ++ expand (largestPowers_list_0 n)
   where
-    lpn = seg ++ foldr (\a l -> a : seg ++ l) [] (map inc lpn)
+    expand (a:as) = (a : replicate (n-1) zer) ++ (expand as)
+
+-- lightly optimised version of the fully list-based approach
+largestPowers_list :: Iterable a => Int -> [a]
+largestPowers_list n = lpn
+  where
     seg = replicate (n-1) (inc zer)
+    lpn = seg ++ foldr (\a l -> a : seg ++ l) [] (map inc lpn)
 
--- A different approach, which lower memory use, probably(?) at cost of speed
-
+-- incrementation for base-n representations, for the counting-based approach 
 increment_base :: Int -> [Int] -> [Int]
 increment_base _ [] = [1]
 increment_base n (a:as) | a <  n-1 = (a+1) : as
 increment_base n (a:as) | a == n-1 = 0 : increment_base n as
-increment_base n _ = error "digits out of range"
--- speedup option: simplify checks, assume digits in [0..n-1]
+-- assumes all list entries encountered are in [0..n-1]
 
-largestPowers4 :: Int -> [Int]
-largestPowers4 n = map (+1) $ tail $ map leading_zeros $ iterate (increment_base n) []
+-- counting-based approach
+largestPowers_counting :: Int -> [Int]
+largestPowers_counting n = map (+1) $ tail $ map leading_zeros $ iterate (increment_base n) []
   where
     leading_zeros l = length $ takeWhile (==0) l
 
--- Interesting comparison: In `ghci`, the lazy list-based `largestPowers3` is significantly quicker and (?)lower-memory than `largestPowers4`.  But under optimised compilation, running the test suite, `largestPowers4` fits into the restricted heap and passes the efficiency test better.
-
-largestPowers = largestPowers4
+largestPowers = largestPowers_counting
