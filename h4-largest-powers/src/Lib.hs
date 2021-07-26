@@ -44,5 +44,21 @@ largestPowers3 n = lpn
   where
     lpn = seg ++ foldr (\a l -> a : seg ++ l) [] (map inc lpn)
     seg = replicate (n-1) (inc zer)
-    
-largestPowers = largestPowers3
+
+-- A different approach, which lower memory use, probably(?) at cost of speed
+
+increment_base :: Int -> [Int] -> [Int]
+increment_base _ [] = [1]
+increment_base n (a:as) | a <  n-1 = (a+1) : as
+increment_base n (a:as) | a == n-1 = 0 : increment_base n as
+increment_base n _ = error "digits out of range"
+-- speedup option: simplify checks, assume digits in [0..n-1]
+
+largestPowers4 :: Int -> [Int]
+largestPowers4 n = map (+1) $ tail $ map leading_zeros $ iterate (increment_base n) []
+  where
+    leading_zeros l = length $ takeWhile (==0) l
+
+-- Interesting comparison: In `ghci`, the lazy list-based `largestPowers3` is significantly quicker and (?)lower-memory than `largestPowers4`.  But under optimised compilation, running the test suite, `largestPowers4` fits into the restricted heap and passes the efficiency test better.
+
+largestPowers = largestPowers4
