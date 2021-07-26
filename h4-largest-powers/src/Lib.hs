@@ -52,7 +52,7 @@ increment_base n (a:as) | a == n-1 = 0 : increment_base n as
 
 -- counting-based approach
 largestPowers_counting :: Int -> [Int]
-largestPowers_counting n = map (+1) $ tail $ map leading_zeros $ iterate (increment_base n) []
+largestPowers_counting n = map (+1) $ tail $ map leading_zeros $ iterate' (increment_base n) []
   where
     leading_zeros l = length $ takeWhile (==0) l
 
